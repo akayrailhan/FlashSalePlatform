@@ -12,7 +12,7 @@ namespace TicketAPI.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Havayolu indirim kampanyasındaki çifte satışları (overselling) engellemek için:
+            // to prevent overselling, we use a concurrency token (row version)
             modelBuilder.Entity<Flight>()
                 .Property(f => f.Version)
                 .IsRowVersion();

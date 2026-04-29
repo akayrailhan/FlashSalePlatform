@@ -15,6 +15,7 @@ namespace TicketAPI.Models
 
         // Concurrency control for PostgreSQL
         [Timestamp]
+        [ConcurrencyCheck]
         public uint Version { get; set; }
     }
 }
