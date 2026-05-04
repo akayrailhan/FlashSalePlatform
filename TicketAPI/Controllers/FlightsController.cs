@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 using TicketAPI.Data;
 using TicketAPI.DTOs;
 using TicketAPI.Models;
@@ -11,11 +14,13 @@ namespace TicketAPI.Controllers
     public class FlightsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IDistributedCache _cache; // Redis motorumuz eklendi
 
-        // Database connection
-        public FlightsController(AppDbContext context)
+        // Database ve Cache bağlantısı (Dependency Injection)
+        public FlightsController(AppDbContext context, IDistributedCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         [HttpPost]
@@ -26,10 +31,21 @@ namespace TicketAPI.Controllers
             return Ok(newFlight);
         }
 
-        // Flight information without sensitive data
+        // Flight information without sensitive data (Redis Cache Destekli)
         [HttpGet("{id}")]
         public async Task<ActionResult<FlightDto>> GetFlight(Guid id)
         {
+            string cacheKey = $"flight_{id}";
+
+            // 1. Önce Redis'e sor (Milisaniyelik hız)
+            var cachedFlight = await _cache.GetStringAsync(cacheKey);
+            if (!string.IsNullOrEmpty(cachedFlight))
+            {
+                // Önbellekte varsa JSON'dan DTO'ya çevir ve veritabanına hiç gitmeden dön
+                return Ok(JsonSerializer.Deserialize<FlightDto>(cachedFlight));
+            }
+
+            // 2. Önbellekte yoksa (Cache Miss) veritabanına git
             var flight = await _context.Flights.FindAsync(id);
 
             if (flight == null) return NotFound("Uçuş bulunamadı.");
@@ -45,6 +61,13 @@ namespace TicketAPI.Controllers
                 BasePrice = flight.BasePrice,
                 AvailableSeats = flight.AvailableSeats
             };
+
+            // 3. Veritabanından geleni 2 dakikalığına Redis'e kaydet
+            var cacheOptions = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2)
+            };
+            await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(dto), cacheOptions);
 
             return Ok(dto);
         }
@@ -67,7 +90,7 @@ namespace TicketAPI.Controllers
             flight.Version += 1; // Bump version on each purchase
 
             // 4. Create the order record
-            var newOrder = new Order
+            var newOrder = new TicketAPI.Models.Order
             {
                 FlightId = flight.Id,
                 UserEmail = request.UserEmail,
@@ -82,6 +105,10 @@ namespace TicketAPI.Controllers
                 // If someone bought seats before we save (version changed),
                 // EF throws DbUpdateConcurrencyException.
                 await _context.SaveChangesAsync();
+
+                // KRİTİK DOKUNUŞ: Bilet satıldığı ve koltuk azaldığı için Redis'teki eski veriyi çöpe atıyoruz.
+                // Bir sonraki "GetFlight" isteği mecburen veritabanına gidip güncel koltuk sayısını alacak.
+                await _cache.RemoveAsync($"flight_{id}");
 
                 return Ok(new { Message = "Bilet başarıyla satın alındı!", OrderId = newOrder.Id });
             }
