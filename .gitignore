@@ -1,0 +1,23 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Local environment files
+.env
+.env.*
+
+# Local app settings (may contain secrets)
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+
+# Certificates and keys
+*.pfx
+*.snk
