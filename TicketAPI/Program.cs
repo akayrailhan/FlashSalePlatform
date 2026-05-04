@@ -23,7 +23,7 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.InstanceName = "TicketAPI_";
 });
 
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+builder.Services.AddMediatR(typeof(Program));
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
