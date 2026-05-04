@@ -1,3 +1,4 @@
+using MediatR;
 using TicketAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
@@ -22,6 +23,7 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.InstanceName = "TicketAPI_";
 });
 
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
