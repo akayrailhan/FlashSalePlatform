@@ -56,6 +56,8 @@ try
 
     app.MapMetrics();
 
+    app.MapGet("/", () => "TicketAPI running in Italy server.");
+
     app.Run();
 }
 catch (Exception ex)
