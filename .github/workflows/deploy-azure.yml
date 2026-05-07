@@ -20,6 +20,7 @@ jobs:
       DOTNET_VERSION: "9.0.x"
       PROJECT_PATH: "TicketAPI/TicketAPI.csproj"
       PUBLISH_DIR: "./publish"
+      PUBLISH_ZIP: "publish.zip"
 
     steps:
       - name: Checkout
@@ -37,6 +38,11 @@ jobs:
         run: |
           dotnet publish ${{ env.PROJECT_PATH }} -c Release -o ${{ env.PUBLISH_DIR }} --no-restore
 
+      - name: Zip the application
+        run: |
+          cd ${{ env.PUBLISH_DIR }}
+          zip -r "$GITHUB_WORKSPACE/${{ env.PUBLISH_ZIP }}" .
+
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
@@ -48,4 +54,4 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: "galajet-api"
-          package: ${{ env.PUBLISH_DIR }}
+          package: ${{ env.PUBLISH_ZIP }}
