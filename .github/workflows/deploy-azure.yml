@@ -1,4 +1,4 @@
-name: Deploy TicketAPI to Azure
+name: Deploy to Azure (Docker & GHCR)
 
 on:
   push:
@@ -6,42 +6,41 @@ on:
       - main
     paths:
       - "TicketAPI/**"
+      - "Dockerfile"
       - ".github/workflows/deploy-azure.yml"
   workflow_dispatch:
 
 permissions:
   id-token: write
   contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ toLower(github.repository_owner) }}/galajet-api
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    env:
-      DOTNET_VERSION: "9.0.x"
-      PROJECT_PATH: "TicketAPI/TicketAPI.csproj"
-      PUBLISH_DIR: "./publish"
-      PUBLISH_ZIP: "publish.zip"
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Restore
-        run: dotnet restore ${{ env.PROJECT_PATH }}
-
-      - name: Publish
-        run: |
-          dotnet publish ${{ env.PROJECT_PATH }} -c Release -o ${{ env.PUBLISH_DIR }} --no-restore
-
-      - name: Zip the application
-        run: |
-          cd ${{ env.PUBLISH_DIR }}
-          zip -r "$GITHUB_WORKSPACE/${{ env.PUBLISH_ZIP }}" .
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -50,8 +49,8 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy to App Service
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: "galajet-api"
-          package: ${{ env.PUBLISH_ZIP }}
+          images: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
