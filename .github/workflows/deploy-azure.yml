@@ -17,7 +17,6 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ toLower(github.repository_owner) }}/galajet-api
 
 jobs:
   build-and-deploy:
@@ -26,6 +25,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set image name (lowercase)
+        run: |
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY_OWNER,,}/galajet-api" >> $GITHUB_ENV
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
