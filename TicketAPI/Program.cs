@@ -35,6 +35,13 @@ try
     });
 
     builder.Services.AddMediatR(typeof(Program));
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("AllowFrontend", policy =>
+            policy.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader());
+    });
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
@@ -49,6 +56,10 @@ try
     }
 
     app.UseHttpsRedirection();
+
+    app.UseCors("AllowFrontend");
+
+    app.UseAuthorization();
 
     app.UseHttpMetrics();
 
