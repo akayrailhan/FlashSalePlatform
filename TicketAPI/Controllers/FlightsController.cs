@@ -35,6 +35,13 @@ namespace TicketAPI.Controllers
             return Ok(dto);
         }
 
+        [HttpGet]
+        public async Task<ActionResult<List<FlightDto>>> GetAllFlights()
+        {
+            var flights = await _mediator.Send(new GetAllFlightsQuery());
+            return Ok(flights);
+        }
+
         [HttpPost("{id}/buy")]
         public async Task<IActionResult> BuyTicket(Guid id, [FromBody] BuyTicketRequestDto request)
         {
