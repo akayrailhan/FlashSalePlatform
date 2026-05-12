@@ -1,9 +1,7 @@
 export interface IFlight {
     id: string;
-    flightNumber: string;
-    origin: string;
+    departure: string;
     destination: string;
-    departureTime: string;
-    basePrice: number;
-    availableSeats: number;
+    date: string;
+    price: number;
 }

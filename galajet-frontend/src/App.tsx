@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
+import Checkout from './components/Checkout';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import type { IFlight } from './types/flight';
@@ -70,21 +71,47 @@ function App() {
                 key={flight.id}
                 className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
               >
-                <div className="text-sm font-semibold text-slate-500">
-                  {flight.flightNumber}
-                </div>
-                <div className="mt-2 text-lg font-semibold text-slate-800">
-                  {flight.origin} → {flight.destination}
-                </div>
-                <div className="mt-2 text-sm text-slate-500">
-                  Kalkis: {new Date(flight.departureTime).toLocaleString('tr-TR')}
-                </div>
-                <div className="mt-4 text-base font-bold text-indigo-600">
-                  {flight.basePrice.toFixed(2)} TRY
-                </div>
-                <div className="mt-2 text-sm text-slate-600">
-                  Bos koltuk: {flight.availableSeats}
-                </div>
+                {/* Backward-compatible mapping for older payload shapes */}
+                {(() => {
+                  const priceValue =
+                    typeof flight.price === 'number'
+                      ? flight.price
+                      : typeof (flight as { basePrice?: number }).basePrice ===
+                        'number'
+                        ? (flight as { basePrice?: number }).basePrice
+                        : null;
+                  const priceText =
+                    typeof priceValue === 'number'
+                      ? priceValue.toFixed(2)
+                      : 'Fiyat yok';
+                  const departureValue =
+                    (flight as { departure?: string }).departure ??
+                    (flight as { origin?: string }).origin ??
+                    '-';
+                  const destinationValue =
+                    (flight as { destination?: string }).destination ?? '-';
+                  const dateValue =
+                    (flight as { date?: string }).date ??
+                    (flight as { departureTime?: string }).departureTime ?? '';
+
+                  return (
+                    <>
+                      <div className="text-sm font-semibold text-slate-500">Ucus</div>
+                      <div className="mt-2 text-lg font-semibold text-slate-800">
+                        {departureValue} → {destinationValue}
+                      </div>
+                      <div className="mt-2 text-sm text-slate-500">
+                        Kalkis:{' '}
+                        {dateValue
+                          ? new Date(dateValue).toLocaleString('tr-TR')
+                          : 'Tarih bilgisi yok'}
+                      </div>
+                      <div className="mt-4 text-base font-bold text-indigo-600">
+                        {priceText} TRY
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -100,6 +127,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/checkout/:id" element={<Checkout />} />
         <Route path="/" element={renderFlights()} />
       </Routes>
     </Router>

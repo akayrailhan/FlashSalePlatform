@@ -1,11 +1,13 @@
-import axios from 'axios';
+import apiClient from './apiClient';
 
 import type { IFlight } from '../types/flight';
 
-const FLIGHTS_URL =
-    'https://galajet-api-b2eyb4b6dbexfnd2.italynorth-01.azurewebsites.net/api/flights';
-
 export const getFlights = async (): Promise<IFlight[]> => {
-    const response = await axios.get<IFlight[]>(FLIGHTS_URL);
-    return response.data;
+    try {
+        const response = await apiClient.get<IFlight[]>('/api/flights');
+        return response.data;
+    } catch (err) {
+        const message = err instanceof Error ? err.message : 'Flight request failed.';
+        throw new Error(message);
+    }
 };
