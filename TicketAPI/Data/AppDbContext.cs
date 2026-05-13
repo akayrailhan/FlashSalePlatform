@@ -9,6 +9,7 @@ namespace TicketAPI.Data
 
         public DbSet<Flight> Flights { get; set; }
         public DbSet<Order> Orders { get; set; }
+        public DbSet<Booking> Bookings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
