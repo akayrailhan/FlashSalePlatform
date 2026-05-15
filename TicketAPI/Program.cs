@@ -59,7 +59,8 @@ try
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+                IssuerSigningKeyResolver = (_, _, _, _) =>
+                    new[] { new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)) },
                 ValidateIssuer = true,
                 ValidIssuer = jwtIssuer,
                 ValidateAudience = true,
