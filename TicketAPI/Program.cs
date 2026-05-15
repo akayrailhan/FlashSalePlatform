@@ -1,6 +1,10 @@
 using MediatR;
 using TicketAPI.Data;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Prometheus;
 using Serilog;
 using StackExchange.Redis;
@@ -35,6 +39,37 @@ try
     });
 
     builder.Services.AddMediatR(typeof(Program));
+
+    var jwtSecret = builder.Configuration["SupabaseAuth:JwtSecret"];
+    var jwtIssuer = builder.Configuration["SupabaseAuth:Issuer"];
+    var jwtAudience = builder.Configuration["SupabaseAuth:Audience"];
+
+    if (string.IsNullOrWhiteSpace(jwtSecret) ||
+        string.IsNullOrWhiteSpace(jwtIssuer) ||
+        string.IsNullOrWhiteSpace(jwtAudience))
+    {
+        throw new InvalidOperationException(
+            "SupabaseAuth ayarlari eksik. SupabaseAuth:JwtSecret, SupabaseAuth:Issuer ve SupabaseAuth:Audience tanimlanmali.");
+    }
+
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.RequireHttpsMetadata = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+                ValidateIssuer = true,
+                ValidIssuer = jwtIssuer,
+                ValidateAudience = true,
+                ValidAudience = jwtAudience,
+                ValidateLifetime = true,
+                NameClaimType = "sub",
+                RoleClaimType = ClaimTypes.Role
+            };
+        });
+
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("AllowFrontend", policy =>
@@ -59,6 +94,7 @@ try
 
     app.UseCors("AllowFrontend");
 
+    app.UseAuthentication();
     app.UseAuthorization();
 
     app.UseHttpMetrics();

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TicketAPI.Commands;
 using TicketAPI.DTOs;
@@ -17,12 +18,20 @@ namespace TicketAPI.Controllers
             _mediator = mediator;
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateBooking([FromBody] CreateBookingRequestDto request)
         {
+            if (request.FlightId == Guid.Empty)
+            {
+                return BadRequest(new { success = false, message = "Gecersiz ucus bilgisi." });
+            }
+
             var userId =
-                User.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
-                User.FindFirst("sub")?.Value;
+                User.FindFirstValue("sub") ??
+                User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+                User.FindFirstValue(ClaimTypes.Name) ??
+                User.Identity?.Name;
 
             // Token'dan kullanici kimligini cekiyoruz.
             if (string.IsNullOrWhiteSpace(userId))
