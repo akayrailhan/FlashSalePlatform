@@ -1,15 +1,17 @@
 using MediatR;
 using TicketAPI.Data;
-using System.Security.Claims;
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Prometheus;
 using Serilog;
 using StackExchange.Redis;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.OpenApi.Models;
 
 Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore.Authentication", Serilog.Events.LogEventLevel.Debug)
     .WriteTo.Console()
     .CreateLogger();
 
@@ -38,39 +40,29 @@ try
         options.InstanceName = "TicketAPI_";
     });
 
-    builder.Services.AddMediatR(typeof(Program));
-
-    var jwtSecret = builder.Configuration["SupabaseAuth:JwtSecret"];
-    var jwtIssuer = builder.Configuration["SupabaseAuth:Issuer"];
-    var jwtAudience = builder.Configuration["SupabaseAuth:Audience"];
-
-    if (string.IsNullOrWhiteSpace(jwtSecret) ||
-        string.IsNullOrWhiteSpace(jwtIssuer) ||
-        string.IsNullOrWhiteSpace(jwtAudience))
+    builder.Services.AddAuthentication(options =>
     {
-        throw new InvalidOperationException(
-            "SupabaseAuth ayarlari eksik. SupabaseAuth:JwtSecret, SupabaseAuth:Issuer ve SupabaseAuth:Audience tanimlanmali.");
-    }
-
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
         .AddJwtBearer(options =>
         {
-            options.RequireHttpsMetadata = true;
+            var issuer = builder.Configuration["SupabaseAuth:Issuer"]!;
+            var audience = builder.Configuration["SupabaseAuth:Audience"]!;
+
+            options.Authority = issuer;
+
             options.TokenValidationParameters = new TokenValidationParameters
             {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKeyResolver = (_, _, _, _) =>
-                    new[] { new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)) },
                 ValidateIssuer = true,
-                ValidIssuer = jwtIssuer,
+                ValidIssuer = issuer,
                 ValidateAudience = true,
-                ValidAudience = jwtAudience,
-                ValidateLifetime = true,
-                NameClaimType = "sub",
-                RoleClaimType = ClaimTypes.Role
+                ValidAudience = audience,
+                ValidateLifetime = true
             };
         });
 
+    builder.Services.AddMediatR(typeof(Program));
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("AllowFrontend", policy =>
@@ -80,7 +72,35 @@ try
     });
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen();
+    builder.Services.AddSwaggerGen(c =>
+    {
+        c.SwaggerDoc("v1", new OpenApiInfo { Title = "TicketAPI", Version = "v1" });
+
+        // Swagger'da JWT Bearer Authorization butonunu ekleyelim
+        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Description = "JWT Authorization header using the Bearer scheme. Ornek: \"Bearer {token}\"",
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.ApiKey,
+            Scheme = "Bearer"
+        });
+
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
+                new string[] {}
+            }
+        });
+    });
 
     var app = builder.Build();
 
