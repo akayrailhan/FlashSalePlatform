@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TicketAPI.Commands;
 using TicketAPI.DTOs;
+using TicketAPI.Queries;
 
 namespace TicketAPI.Controllers
 {
@@ -27,14 +28,7 @@ namespace TicketAPI.Controllers
                 return BadRequest(new { success = false, message = "Gecersiz ucus bilgisi." });
             }
 
-            var userId =
-                User.FindFirstValue("sub") ??
-                User.FindFirstValue(ClaimTypes.NameIdentifier) ??
-                User.FindFirstValue(ClaimTypes.Name) ??
-                User.Identity?.Name;
-
-            // we get userId from the token claims, if it's not present we return unauthorized
-            //safeguard to ensure that we have a userId to associate with the booking
+            var userId = GetCurrentUserId();
             if (string.IsNullOrWhiteSpace(userId))
             {
                 return Unauthorized(new { success = false, message = "Kullanici bilgisi bulunamadi." });
@@ -44,6 +38,33 @@ namespace TicketAPI.Controllers
                 new CreateBookingCommand(request.FlightId, userId));
 
             return Ok(new { success = true, pnrCode });
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<ActionResult<List<BookingDto>>> GetBookings()
+        {
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized(new { success = false, message = "Kullanici bilgisi bulunamadi." });
+            }
+
+            var bookings = await _mediator.Send(new GetBookingsQuery(userId));
+            return Ok(bookings);
+        }
+
+        private string? GetCurrentUserId()
+        {
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                return null;
+            }
+
+            return User.FindFirstValue("sub")
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue("user_id")
+                ?? User.Identity?.Name;
         }
     }
 }
