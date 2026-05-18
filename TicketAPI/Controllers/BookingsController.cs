@@ -33,7 +33,8 @@ namespace TicketAPI.Controllers
                 User.FindFirstValue(ClaimTypes.Name) ??
                 User.Identity?.Name;
 
-            // Token'dan kullanici kimligini cekiyoruz.
+            // we get userId from the token claims, if it's not present we return unauthorized
+            //safeguard to ensure that we have a userId to associate with the booking
             if (string.IsNullOrWhiteSpace(userId))
             {
                 return Unauthorized(new { success = false, message = "Kullanici bilgisi bulunamadi." });
