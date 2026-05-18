@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import Checkout from './components/Checkout';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
+import MyTickets from './components/MyTickets';
 import type { IFlight } from './types/flight';
 import { getFlights } from './services/flightService';
 
@@ -127,6 +128,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/my-tickets" element={<MyTickets />} />
         <Route path="/checkout/:id" element={<Checkout />} />
         <Route path="/" element={renderFlights()} />
       </Routes>

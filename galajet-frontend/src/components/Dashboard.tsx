@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, LogOut, Plane, PlaneTakeoff, Ticket } from 'lucide-react';
+import {
+    ArrowRight,
+    Loader2,
+    LogOut,
+    Plane,
+    PlaneTakeoff,
+    Ticket,
+} from 'lucide-react';
 import { supabaseClient } from '../services/supabaseClient';
 import { getFlights } from '../services/flightService';
 import type { IFlight } from '../types/flight';
@@ -49,14 +56,24 @@ function Dashboard() {
                             </p>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-4 py-2 text-xs font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-100"
-                    >
-                        <LogOut className="h-4 w-4" />
-                        Cikis Yap
-                    </button>
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                        <button
+                            type="button"
+                            onClick={() => navigate('/my-tickets')}
+                            className="flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2 text-xs font-semibold text-zinc-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                        >
+                            <ArrowRight className="h-4 w-4" />
+                            Biletlerim
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-4 py-2 text-xs font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-100"
+                        >
+                            <LogOut className="h-4 w-4" />
+                            Cikis Yap
+                        </button>
+                    </div>
                 </header>
 
                 <section className="mt-8">
