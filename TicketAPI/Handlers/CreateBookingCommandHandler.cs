@@ -12,7 +12,6 @@ namespace TicketAPI.Handlers
     {
         private static readonly char[] PnrAlphabet =
             "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
-        private const int LockDurationSeconds = 10;
 
         private readonly AppDbContext _context;
         private readonly IConnectionMultiplexer _redis;
@@ -29,13 +28,12 @@ namespace TicketAPI.Handlers
             var lockValue = Guid.NewGuid().ToString("N");
             var database = _redis.GetDatabase();
 
-            var acquired = await database.StringSetAsync(
+            var lockAcquired = await database.LockTakeAsync(
                 lockKey,
                 lockValue,
-                TimeSpan.FromSeconds(LockDurationSeconds),
-                When.NotExists);
+                TimeSpan.FromSeconds(5));
 
-            if (!acquired)
+            if (!lockAcquired)
             {
                 throw new ConcurrencyException(
                     "Şu anda başka bir kullanıcı bu uçuş için işlem yapıyor, lütfen tekrar deneyin.");
@@ -60,16 +58,7 @@ namespace TicketAPI.Handlers
             }
             finally
             {
-                const string releaseScript = @"
-if redis.call('GET', KEYS[1]) == ARGV[1] then
-    return redis.call('DEL', KEYS[1])
-end
-return 0";
-
-                await database.ScriptEvaluateAsync(
-                    releaseScript,
-                    [lockKey],
-                    [lockValue]);
+                await database.LockReleaseAsync(lockKey, lockValue);
             }
         }
 
