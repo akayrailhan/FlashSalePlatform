@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using MediatR;
+using StackExchange.Redis;
 using TicketAPI.Commands;
 using TicketAPI.Data;
+using TicketAPI.Exceptions;
 using TicketAPI.Models;
 
 namespace TicketAPI.Handlers
@@ -10,30 +12,65 @@ namespace TicketAPI.Handlers
     {
         private static readonly char[] PnrAlphabet =
             "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
+        private const int LockDurationSeconds = 10;
 
         private readonly AppDbContext _context;
+        private readonly IConnectionMultiplexer _redis;
 
-        public CreateBookingCommandHandler(AppDbContext context)
+        public CreateBookingCommandHandler(AppDbContext context, IConnectionMultiplexer redis)
         {
             _context = context;
+            _redis = redis;
         }
 
         public async Task<string> Handle(CreateBookingCommand request, CancellationToken cancellationToken)
         {
-            var pnrCode = GeneratePnrCode(); // PNR kodu uretimi
+            var lockKey = $"flight_lock_{request.FlightId}";
+            var lockValue = Guid.NewGuid().ToString("N");
+            var database = _redis.GetDatabase();
 
-            var booking = new Booking
+            var acquired = await database.StringSetAsync(
+                lockKey,
+                lockValue,
+                TimeSpan.FromSeconds(LockDurationSeconds),
+                When.NotExists);
+
+            if (!acquired)
             {
-                FlightId = request.FlightId,
-                UserId = request.UserId,
-                PnrCode = pnrCode,
-                CreatedAt = DateTime.UtcNow
-            };
+                throw new ConcurrencyException(
+                    "Şu anda başka bir kullanıcı bu uçuş için işlem yapıyor, lütfen tekrar deneyin.");
+            }
 
-            _context.Bookings.Add(booking);
-            await _context.SaveChangesAsync(cancellationToken);
+            try
+            {
+                var pnrCode = GeneratePnrCode();
 
-            return pnrCode;
+                var booking = new Booking
+                {
+                    FlightId = request.FlightId,
+                    UserId = request.UserId,
+                    PnrCode = pnrCode,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Bookings.Add(booking);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                return pnrCode;
+            }
+            finally
+            {
+                const string releaseScript = @"
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+    return redis.call('DEL', KEYS[1])
+end
+return 0";
+
+                await database.ScriptEvaluateAsync(
+                    releaseScript,
+                    [lockKey],
+                    [lockValue]);
+            }
         }
 
         private static string GeneratePnrCode()

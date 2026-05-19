@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TicketAPI.Commands;
 using TicketAPI.DTOs;
+using TicketAPI.Exceptions;
 using TicketAPI.Queries;
 
 namespace TicketAPI.Controllers
@@ -34,10 +35,17 @@ namespace TicketAPI.Controllers
                 return Unauthorized(new { success = false, message = "Kullanici bilgisi bulunamadi." });
             }
 
-            var pnrCode = await _mediator.Send(
-                new CreateBookingCommand(request.FlightId, userId));
+            try
+            {
+                var pnrCode = await _mediator.Send(
+                    new CreateBookingCommand(request.FlightId, userId));
 
-            return Ok(new { success = true, pnrCode });
+                return Ok(new { success = true, pnrCode });
+            }
+            catch (ConcurrencyException ex)
+            {
+                return Conflict(new { success = false, message = ex.Message });
+            }
         }
 
         [Authorize]
