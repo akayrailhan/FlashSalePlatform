@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
+using System.Collections.Generic;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using TicketAPI.Commands;
 using TicketAPI.Data;
@@ -41,6 +43,19 @@ namespace TicketAPI.Handlers
 
             try
             {
+                var flight = await _context.Flights
+                    .FirstOrDefaultAsync(f => f.Id == request.FlightId, cancellationToken);
+
+                if (flight is null)
+                {
+                    throw new KeyNotFoundException("Uçuş bulunamadı.");
+                }
+
+                if (flight.AvailableSeats <= 0)
+                {
+                    throw new InvalidOperationException("Bu uçuş için tüm koltuklar doludur.");
+                }
+
                 var pnrCode = GeneratePnrCode();
 
                 var booking = new Booking
@@ -52,6 +67,8 @@ namespace TicketAPI.Handlers
                 };
 
                 _context.Bookings.Add(booking);
+
+                flight.AvailableSeats -= 1;
                 await _context.SaveChangesAsync(cancellationToken);
 
                 return pnrCode;

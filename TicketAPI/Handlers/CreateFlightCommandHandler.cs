@@ -16,6 +16,11 @@ namespace TicketAPI.Handlers
 
         public async Task<Flight> Handle(CreateFlightCommand request, CancellationToken cancellationToken)
         {
+            if (request.Flight.AvailableSeats <= 0)
+            {
+                request.Flight.AvailableSeats = request.Flight.TotalCapacity;
+            }
+
             _context.Flights.Add(request.Flight);
             await _context.SaveChangesAsync(cancellationToken);
             return request.Flight;
