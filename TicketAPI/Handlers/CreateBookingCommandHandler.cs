@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Collections.Generic;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
@@ -48,7 +47,7 @@ namespace TicketAPI.Handlers
 
                 if (flight is null)
                 {
-                    throw new KeyNotFoundException("Uçuş bulunamadı.");
+                    throw new NotFoundException("Uçuş bulunamadı.");
                 }
 
                 if (flight.AvailableSeats <= 0)
