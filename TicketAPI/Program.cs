@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using Microsoft.ApplicationInsights.Extensibility;
+using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 using TicketAPI.Middleware;
 
 Log.Logger = new LoggerConfiguration()
@@ -21,6 +23,21 @@ try
     Log.Information("Uygulama baslatiliyor...");
 
     var builder = WebApplication.CreateBuilder(args);
+
+    var applicationInsightsConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+
+    Log.Logger = new LoggerConfiguration()
+        .MinimumLevel.Information()
+        .MinimumLevel.Override("Microsoft.AspNetCore.Authentication", Serilog.Events.LogEventLevel.Debug)
+        .Enrich.FromLogContext()
+        .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+        .WriteTo.ApplicationInsights(
+            new TelemetryConfiguration
+            {
+                ConnectionString = applicationInsightsConnectionString
+            },
+            TelemetryConverter.Traces)
+        .CreateLogger();
 
     builder.Host.UseSerilog();
 
