@@ -46,6 +46,11 @@ try
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseNpgsql(connectionString));
 
+    builder.Services.AddApplicationInsightsTelemetry(options =>
+    {
+        options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+    });
+
     var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 
     var configurationOptions = ConfigurationOptions.Parse(redisConnectionString!);
