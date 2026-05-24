@@ -34,9 +34,10 @@ function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [isSignUp, setIsSignUp] = useState(false);
     const [activeFaq, setActiveFaq] = useState<number | null>(0);
 
-    const handleLogin = async (event: React.FormEvent) => {
+    const handleAuth = async (event: React.FormEvent) => {
         event.preventDefault();
 
         if (!email || !password) {
@@ -46,6 +47,21 @@ function Login() {
 
         try {
             setLoading(true);
+            if (isSignUp) {
+                const { error } = await supabaseClient.auth.signUp({
+                    email,
+                    password,
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                toast.success('Kayit basarili! Lutfen giris yapin.');
+                setIsSignUp(false);
+                return;
+            }
+
             const { error } = await supabaseClient.auth.signInWithPassword({
                 email,
                 password,
@@ -136,12 +152,16 @@ function Login() {
 
                     <div className="flex items-center">
                         <div className="w-full rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
-                            <h1 className="text-2xl font-bold text-slate-950">GalaJet Hesabi: Giris Yap</h1>
+                            <h1 className="text-2xl font-bold text-slate-950">
+                                GalaJet Hesabi: {isSignUp ? 'Kayıt Ol' : 'Giris Yap'}
+                            </h1>
                             <p className="mt-2 text-sm text-slate-500">
-                                Seyahat planlarinizi tek bir yerden yonetin.
+                                {isSignUp
+                                    ? 'Hesabinizi olusturun ve saniyeler icinde rezervasyon yapmaya baslayin.'
+                                    : 'Seyahat planlarinizi tek bir yerden yonetin.'}
                             </p>
 
-                            <form onSubmit={handleLogin} className="mt-8 space-y-6">
+                            <form onSubmit={handleAuth} className="mt-8 space-y-6">
                                 <div className="space-y-2">
                                     <label className="text-sm font-semibold text-slate-900">E-posta</label>
                                     <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-red-500">
@@ -186,12 +206,18 @@ function Login() {
                                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
                                 >
                                     {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
-                                    Giris Yap
+                                    {isSignUp ? 'Kayıt Ol' : 'Giris Yap'}
                                 </button>
 
                                 <p className="text-center text-sm text-slate-600">
-                                    Hesabin yok mu?{' '}
-                                    <span className="font-semibold text-red-600">Kayit Ol</span>
+                                    {isSignUp ? 'Zaten hesabın var mı?' : 'Hesabin yok mu?'}{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsSignUp((current) => !current)}
+                                        className="font-semibold text-red-600 hover:text-red-700"
+                                    >
+                                        {isSignUp ? 'Giriş Yap' : 'Kayıt Ol'}
+                                    </button>
                                 </p>
                             </form>
                         </div>
