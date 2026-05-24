@@ -92,9 +92,9 @@ try
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("AllowFrontend", policy =>
-            policy.AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader());
+            policy.WithOrigins("https://flash-sale-platform.vercel.app", "http://localhost:5173")
+                  .AllowAnyMethod()
+                  .AllowAnyHeader());
     });
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
@@ -140,6 +140,8 @@ try
     app.UseMiddleware<ExceptionHandlingMiddleware>();
 
     app.UseHttpsRedirection();
+
+    app.UseRouting();
 
     app.UseCors("AllowFrontend");
 
