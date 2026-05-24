@@ -154,7 +154,7 @@ function Dashboard() {
                                     })()}
                                     <button
                                         type="button"
-                                        onClick={() => navigate(`/checkout/${flight.id}`)}
+                                        onClick={() => navigate('/checkout', { state: { flight } })}
                                         className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-red-700"
                                     >
                                         <Ticket className="h-4 w-4 text-red-400" />

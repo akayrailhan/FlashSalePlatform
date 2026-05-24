@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Calendar,
     CheckCircle,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../services/apiClient';
 import { supabaseClient } from '../services/supabaseClient';
+import type { IFlight } from '../types/flight';
 
 const generatePnr = () => {
     const randomPart = Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -17,7 +18,8 @@ const generatePnr = () => {
 
 function Checkout() {
     const navigate = useNavigate();
-    const { id } = useParams<{ id: string }>();
+    const location = useLocation();
+    const flight = (location.state as { flight?: IFlight & { basePrice?: number } } | null)?.flight;
     const [cardholderName, setCardholderName] = useState('');
     const [cardNumber, setCardNumber] = useState('');
     const [expiryDate, setExpiryDate] = useState('');
@@ -29,7 +31,7 @@ function Checkout() {
     const handlePayment = async (event: React.FormEvent) => {
         event.preventDefault();
 
-        if (!id) {
+        if (!flight?.id) {
             setErrorMessage('Ucus bilgisi bulunamadi. Lutfen tekrar deneyin.');
             return;
         }
@@ -54,7 +56,7 @@ function Checkout() {
             // API calls stay in the service layer; here we only send intent.
             await apiClient.post(
                 '/api/bookings',
-                { flightId: id },
+                { flightId: flight.id },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -176,26 +178,86 @@ function Checkout() {
                         <h2 className="text-lg font-semibold text-slate-900">Ucus Ozeti</h2>
                     </div>
 
+                    {flight ? null : (
+                        <div className="mt-6 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+                            Ucus bilgisi bulunamadi. Lütfen dashboarddan tekrar secin.
+                        </div>
+                    )}
+
                     <div className="mt-6 space-y-4 text-sm text-slate-600">
-                        <div className="flex items-center gap-3">
-                            <Plane className="h-4 w-4 text-red-500" />
-                            <div>
-                                <p className="text-xs uppercase text-slate-400">Rota</p>
-                                <p className="font-semibold text-slate-900">Istanbul → Amsterdam</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <Calendar className="h-4 w-4 text-red-500" />
-                            <div>
-                                <p className="text-xs uppercase text-slate-400">Tarih</p>
-                                <p className="font-semibold text-slate-900">15 Haziran 2026</p>
-                            </div>
-                        </div>
+                        {(() => {
+                            const departureValue =
+                                (flight as { departure?: string }).departure ??
+                                (flight as { origin?: string }).origin ??
+                                '-';
+                            const destinationValue =
+                                (flight as { destination?: string }).destination ?? '-';
+                            const dateValue =
+                                (flight as { date?: string }).date ??
+                                (flight as { departureTime?: string }).departureTime ??
+                                '';
+
+                            return (
+                                <>
+                                    <div className="flex items-center gap-3">
+                                        <Plane className="h-4 w-4 text-red-500" />
+                                        <div>
+                                            <p className="text-xs uppercase text-slate-400">Rota</p>
+                                            <p className="font-semibold text-slate-900">
+                                                {departureValue} → {destinationValue}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <Calendar className="h-4 w-4 text-red-500" />
+                                        <div>
+                                            <p className="text-xs uppercase text-slate-400">Tarih</p>
+                                            <p className="font-semibold text-slate-900">
+                                                {dateValue ? new Date(dateValue).toLocaleString('tr-TR') : '-'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        })()}
                         <div className="flex items-center gap-3">
                             <CreditCard className="h-4 w-4 text-red-500" />
                             <div>
-                                <p className="text-xs uppercase text-slate-400">Tutar</p>
-                                <p className="text-lg font-bold text-red-600">4.500 TL</p>
+                                <p className="text-xs uppercase text-slate-400">Bilet Fiyati</p>
+                                <p className="text-lg font-bold text-red-600">
+                                    {(flight?.basePrice ?? flight?.price ?? 0).toFixed(2)} TL
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="space-y-3 text-sm">
+                                <div className="flex items-center justify-between gap-4">
+                                    <span className="text-slate-500">Bilet Fiyatı</span>
+                                    <span className="font-semibold text-slate-900">
+                                        {(flight?.basePrice ?? flight?.price ?? 0).toFixed(2)} TL
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4">
+                                    <span className="text-slate-500">Vergi ve Harçlar (%10)</span>
+                                    <span className="font-semibold text-slate-900">
+                                        {((flight?.basePrice ?? flight?.price ?? 0) * 0.1).toFixed(2)} TL
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4">
+                                    <span className="text-slate-500">Hizmet Bedeli</span>
+                                    <span className="font-semibold text-slate-900">150.00 TL</span>
+                                </div>
+                                <div className="mt-4 flex items-center justify-between gap-4 border-t border-slate-200 pt-3">
+                                    <span className="text-sm font-semibold text-slate-900">Toplam Tutar</span>
+                                    <span className="text-xl font-bold text-red-600">
+                                        {(
+                                            (flight?.basePrice ?? flight?.price ?? 0) +
+                                            (flight?.basePrice ?? flight?.price ?? 0) * 0.1 +
+                                            150
+                                        ).toFixed(2)} TL
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
