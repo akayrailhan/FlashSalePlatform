@@ -2,9 +2,10 @@
 
 ## 🚀 Live Demo & Quick Links
 * **🌍 Frontend (User Interface):** [https://flash-sale-platform.vercel.app](https://flash-sale-platform.vercel.app)
-* **⚙️ Backend API (Swagger UI):** [https://galajet-api-b2eyb4b6dbexfnd2.italynorth-01.azurewebsites.net/swagger](https://galajet-api-b2eyb4b6dbexfnd2.italynorth-01.azurewebsites.net/swagger)
+* **⚙️ Backend API:** [https://galajet-api-b2eyb4b6dbexfnd2.italynorth-01.azurewebsites.net](https://galajet-api-b2eyb4b6dbexfnd2.italynorth-01.azurewebsites.net)
 
 > **💡 Note for Reviewers:** The backend API is hosted on Azure App Service. If the platform has been inactive, the first API request (e.g., fetching flights) might take a few seconds due to Azure's standard "cold start" behavior.
+> The Swagger UI is not listed here because the public cloud deployment focuses on the API itself, and Swagger is not always the most reliable reviewer-facing link in hosted environments.
 
 ---
 
